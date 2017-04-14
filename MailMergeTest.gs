@@ -1,3 +1,4 @@
+// http://stackoverflow.com/questions/20108511/is-it-possible-to-prefill-a-google-form-using-data-from-a-google-spreadsheet
 function sendEmails() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var dataSheet = ss.getSheets()[0];
