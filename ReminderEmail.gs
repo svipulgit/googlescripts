@@ -1,10 +1,21 @@
-var statusUpdateColumnIndex = "B1"
+var statusUpdateColumnIndex = "B1";
 var sheetNameEnum = {
     MONTHLY: "Monthly",
     YEARLY: "Yearly",
-    ANYTIME: "Anytime",
+    ONETIME: "OneTime",
 }
+var botReply = [];
   
+function sendBotReply() {
+  for (i in sheetNameEnum) {
+    processSheet( sheetNameEnum[i], false );
+  }
+  if (botReply.length == 0) {
+    botReply.push("You are all set! No tasks are pending.");
+  }
+  return botReply;
+}
+
 function sendReminderEmail() {
   var ss = SpreadsheetApp.getActive();
   var emailSheet = ss.getSheetByName( "Email List" );
@@ -37,12 +48,11 @@ function sendReminderEmail() {
   
   Logger.log(allEmails);
   for (i in sheetNameEnum) {
-    processSheet( sheetNameEnum[i] );
-  }
-  
+    processSheet( sheetNameEnum[i], true );
+  }  
 }
 
-function processSheet( sheetName ) {  
+function processSheet( sheetName, sendEmail ) {  
   Logger.log("processSheet for " + sheetName);
 
   var ss = SpreadsheetApp.getActive();
@@ -90,22 +100,26 @@ function processSheet( sheetName ) {
       if (remindMonth != todayMonth) {
         continue;
       }      
-    } else if (sheetName == sheetNameEnum.ANYTIME) {
+    } else if (sheetName == sheetNameEnum.ONETIME) {
       remindDate = new Date(rowData.remindIt);
       if (remindDate.toLocaleDateString() != now.toLocaleDateString()) {
         continue;
       }
     }
     
-    var emailText = "Task " + rowData.task + " is due on " + rowData.dueDate;
-    var emailSubject = "YAR - " + rowData.task;
-    //MailApp.sendEmail(allEmails, emailSubject, "", { htmlBody: emailText } );
+    var message = "Task " + rowData.task + " is due on " + rowData.dueDate;
+    if (sendEmail) {
+      var emailSubject = "YAR - " + rowData.task;
+      //MailApp.sendEmail(allEmails, emailSubject, "", { htmlBody: message } );
     
-    // Update email sent status
-    emailSentTime = now.toLocaleString();
-    dataSheet.getRange( statusUpdateColumnIndex ).offset( i, 0 ).setValue( emailSentTime );
+      // Update email sent status
+      emailSentTime = now.toLocaleString();
+      dataSheet.getRange( statusUpdateColumnIndex ).offset( i, 0 ).setValue( emailSentTime );
 
-    numEmailsSent += 1;
+      numEmailsSent += 1;
+    } else {
+      botReply.push(message);
+    }
     if (numEmailsSent >= 100) {
       // Send only 100 emails per day
       break;
