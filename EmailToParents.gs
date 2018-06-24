@@ -1,8 +1,8 @@
 function sendEmailToParents() {
   var dbSheetName = "DB";
   var emailDataSheetName = "Email Template";
-  var statusColumnIndex = "AA1";
-  var timeStampColumnIndex = "AB1";
+  var statusColumnIndex = "W1";
+  var timeStampColumnIndex = "X1";
 
   var ss = SpreadsheetApp.getActive();
   var dbSheet = ss.getSheetByName( dbSheetName );
@@ -14,6 +14,7 @@ function sendEmailToParents() {
   var numRows = dbSheet.getMaxRows();
   var numColumns = dbSheet.getMaxColumns();
   var numEmailsSent = 0;
+  var numEmailsLimit = 98;   // Limit the number of emails sent per day to 100
   var dataRange = dbSheet.getRange( 1, 1, numRows, numColumns );
 
   // Create one JavaScript object per row of data.
@@ -32,43 +33,44 @@ function sendEmailToParents() {
     var emailAddr1 = rowData.fatherEmail;
     var emailAddr2 = rowData.motherEmail;
     var toEmailAddr = "";
+    var numEmails = 0;
     if (emailAddr1 && emailAddr2) {
       toEmailAddr = emailAddr1 + "," + emailAddr2;
+      numEmails = 2;
     } else if (emailAddr1) {
       toEmailAddr = emailAddr1;
+      numEmails = 1;
     } else if (emailAddr2) {
       toEmailAddr = emailAddr2;
+      numEmails = 1;
     } else {
       // This should not happen. We should have at least one valid email!!
       continue;
     }
     
+    if (numEmailsSent + numEmails > numEmailsLimit) {
+      break;
+    }
     // Send an email only if 'Email Status' column is 'send'
-    if ( ( !rowData.email1Status ) || ( rowData.email1Status.toLowerCase() != "send" ) ) {
+    if ( ( !rowData.emailStatus ) || ( rowData.emailStatus.toLowerCase() != "send" ) ) {
       continue;
     }
-    
-    Logger.log( toEmailAddr );
-    
+        
     // Generate a personalized email.
     // Given a template string, replace markers (for instance ${"First Name"}) with
     // the corresponding value in a row object (for instance rowData.firstName).
     var emailText = fillInTemplateFromObject(emailTemplate, rowData);
-    var emailSubject = "[SJ Mandir] Classes Registration Confirmation for " + rowData.studentFirstName;
+    var emailSubject = "[SJ Mandir] Gujarati Class Exam Result for " + rowData.studentFirstName;
     // MailApp.sendEmail(toEmailAddr, emailSubject, emailText);
     MailApp.sendEmail(toEmailAddr, emailSubject, "", { htmlBody: emailText } );
     
     // Update email sent status
     var now = new Date();
-    emailSentTime = now.toLocaleTimeString();
+    emailSentTime = now.toLocaleString();
     dbSheet.getRange( statusColumnIndex ).offset( i, 0 ).setValue( "Sent" );
     dbSheet.getRange( timeStampColumnIndex ).offset( i, 0 ).setValue( emailSentTime );
 
-    numEmailsSent += 1;
-    if (numEmailsSent >= 100) {
-      // Send only 100 emails per day
-      break;
-    }
+    numEmailsSent += numEmails;
   }
   
   Logger.log( "Number of emails sent = " + numEmailsSent );
